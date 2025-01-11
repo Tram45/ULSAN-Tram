@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>울산트램 커뮤니티</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            display: flex;
+            min-height: 100vh;
+            font-family: Arial, sans-serif;
+        }
+
+        .sidebar {
+            width: 350px; /* 사이드바 폭 증가 */
+            background-color: #f5f5f5;
+            border-right: 1px solid #ddd;
+            height: 100vh;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .sidebar-title {
+            display: flex;
+            align-items: center;
+            font-size: 26px;
+            font-weight: bold;
+            color: #333;
+            padding: 15px 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #007bff;
+        }
+
+        .title-image {
+            width: 40px;
+            height: 40px;
+            margin-right: 10px;
+        }
+
+        .main-category {
+            margin-bottom: 20px;
+        }
+
+        .main-category-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #333;
+            padding: 10px;
+            background-color: #e0e0e0;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            cursor: pointer;
+        }
+
+        .sub-categories {
+            margin-left: 12px;
+            border-left: 2px solid #ddd;
+            padding-left: 10px;
+        }
+
+        .sub-category {
+            padding: 8px 10px;
+            margin: 5px 0;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: all 0.2s;
+            font-size: 14px; /* 폰트 크기 증가 */
+            color: #555;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .post-count {
+            background-color: #e0e0e0;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            color: #666;
+        }
+
+        .sub-category:hover {
+            background-color: #e8e8e8;
+        }
+
+        .sub-category.active {
+            background-color: #007bff;
+            color: white;
+        }
+
+        .sub-category.active .post-count {
+            background-color: white;
+            color: #007bff;
+        }
+
+        /* 나머지 스타일은 동일 */
+        .main-content {
+            flex: 1;
+            padding: 20px;
+            background-color: #fafafa;
+            overflow-y: auto;
+        }
+
+        .posts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(500px, 1fr));
+            gap: 20px;
+            padding: 20px;
+        }
+
+        .post-card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .post-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .post-image {
+            width: 100%;
+            height: 400px;
+            object-fit: cover;
+        }
+
+        .post-content {
+            padding: 15px;
+        }
+
+        .post-title {
+            font-size: 1.1em;
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .likes {
+            display: flex;
+            align-items: center;
+            color: #666;
+        }
+
+        .likes::before {
+            content: '♥';
+            margin-right: 5px;
+            color: #ff4757;
+        }
+
+        .post-detail {
+            display: none;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .post-detail-image {
+            width: 100%;
+            max-height: 500px;
+            object-fit: contain;
+            margin-bottom: 20px;
+        }
+
+        .post-detail-content {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .comments-section {
+            margin-top: 20px;
+        }
+
+        .comment {
+            background: white;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .reply {
+            margin-left: 30px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-left: 3px solid #007bff;
+        }
+
+        .back-button {
+            padding: 8px 16px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-bottom: 20px;
+        }
+
+        .back-button:hover {
+            background: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="sidebar-title">
+            <img src="images/tram.png" alt="트램 로고" class="title-image">
+            울산트램노선설계
+        </div>
+        <div id="categories"></div>
+    </div>
+
+    <div class="main-content">
+        <h1 id="selectedCategory" style="margin-bottom: 20px; font-size: 24px;"></h1>
+        <div class="posts-grid" id="postsContainer"></div>
+        <div class="post-detail" id="postDetail"></div>
+    </div>
+
+    <script>
+        // 메인 카테고리 정의
+        const mainCategories = {
+            'transfer': '환승연계',
+            'commuting': '출퇴근/통학',
+            'culture': '문화/여가',
+            'daily': '일상생활'
+        };
+
+        // 샘플 게시글 데이터
+        const posts = [
+            {
+                id: 1,
+                title: "태화강역을 자주 이용하는 사람입니다.",
+                imageUrl: "images/test1.png",
+                likes: 256,
+                category: "환승연계",
+                content: "저는 태화강역 주변 환승 정거장이 다른 대중교통과의 연결성을 극대화할 수 있도록 설계되었는지 확인했습니다. 보행 이동 거리나 안내 시스템에 대한 고려를 통해 이런 노선을 설계했더니 환승연계의 만족도가 가장 높게 나왔습니다. 다들 어떻게 생각하시나요?",
+                comments: [
+                    {
+                        id: 1,
+                        author: "칼퇴러",
+                        text: "저는 출퇴근을 하는 입장이지만 이 노선은 출퇴근과 환승연계 모두를 만족시킬 수 있는 노선인 것 같네요!",
+                        replies: [
+                            {
+                                id: 1,
+                                author: "쇼핑조아",
+                                text: "이런 식으로 설계하면 노선이 교통 허브 중심으로만 설계되니까 실제 일상생활에 필요한 이동이 불편해질 것 같아요 ㅠㅠ"
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                id: 2,
+                title: "울산트램 노선도 최종안",
+                imageUrl: "images/test2.png",
+                likes: 213,
+                category: "환승연계",
+                content: "최종 확정된 울산트램 노선도입니다.",
+                comments: [
+                    {
+                        id: 1,
+                        author: "User3",
+                        text: "2호선은 언제 착공되나요?",
+                        replies: []
+                    }
+                ]
+            },
+            {
+                id: 3,
+                title: "태화강역을 자주 이용하는 사람입니다.",
+                imageUrl: "images/test1.png",
+                likes: 118,
+                category: "환승연계",
+                content: "울산트램 1호선의 주요 환승센터 조감도입니다.",
+                comments: [
+                    {
+                        id: 1,
+                        author: "User1",
+                        text: "환승이 편리해 보이네요!",
+                        replies: [
+                            {
+                                id: 1,
+                                author: "User2",
+                                text: "맞아요. 버스와의 연계도 잘 되어있는 것 같습니다."
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                id: 4,
+                title: "울산트램 1호선 환승센터 조감도",
+                imageUrl: "images/test1.png",
+                likes: 76,
+                category: "환승연계",
+                content: "울산트램 1호선의 주요 환승센터 조감도입니다.",
+                comments: [
+                    {
+                        id: 1,
+                        author: "User1",
+                        text: "환승이 편리해 보이네요!",
+                        replies: [
+                            {
+                                id: 1,
+                                author: "User2",
+                                text: "맞아요. 버스와의 연계도 잘 되어있는 것 같습니다."
+                            }
+                        ]
+                    }
+                ]
+            }
+        ];
+
+        // 순열 생성 함수
+        function generatePermutations(arr) {
+            if (arr.length <= 1) return [arr];
+            const result = [];
+            
+            for (let i = 0; i < arr.length; i++) {
+                const current = arr[i];
+                const remaining = [...arr.slice(0, i), ...arr.slice(i + 1)];
+                const remainingPerms = generatePermutations(remaining);
+                
+                for (let perm of remainingPerms) {
+                    result.push([current, ...perm]);
+                }
+            }
+            
+            return result;
+        }
+
+        // 하위 카테고리 생성 함수
+        function getSubCategories(mainCategory) {
+            const others = Object.keys(mainCategories).filter(key => key !== mainCategory);
+            return generatePermutations(others);
+        }
+
+        // 카테고리 표시 이름 가져오기
+        function getCategoryDisplayName(categoryKey) {
+            return mainCategories[categoryKey] || categoryKey;
+        }
+
+        // 게시글 수 가져오기 (실제로는 서버에서 가져와야 함)
+        function getPostCount(category) {
+            // 임시로 랜덤한 숫자 반환
+            return Math.floor(Math.random() * 100) + 1;
+        }
+
+        // 카테고리 생성
+        function createCategories() {
+            const categoriesContainer = document.getElementById('categories');
+            
+            Object.entries(mainCategories).forEach(([mainKey, mainName]) => {
+                const mainCategoryDiv = document.createElement('div');
+                mainCategoryDiv.className = 'main-category';
+                
+                const mainTitle = document.createElement('div');
+                mainTitle.className = 'main-category-title';
+                mainTitle.textContent = mainName;
+                
+                const subCategoriesDiv = document.createElement('div');
+                subCategoriesDiv.className = 'sub-categories';
+                
+                const subCategories = getSubCategories(mainKey);
+                subCategories.forEach(subCategory => {
+                    const subCategoryDiv = document.createElement('div');
+                    subCategoryDiv.className = 'sub-category';
+                    
+                    const categoryName = document.createElement('span');
+                    const displayName = subCategory
+                        .map(cat => getCategoryDisplayName(cat))
+                        .join('-');
+                    categoryName.textContent = displayName;
+                    
+                    const postCount = document.createElement('span');
+                    postCount.className = 'post-count';
+                    postCount.textContent = `(${getPostCount(displayName)})`;
+                    
+                    subCategoryDiv.appendChild(categoryName);
+                    subCategoryDiv.appendChild(postCount);
+                    
+                    subCategoryDiv.onclick = () => selectCategory(mainKey, displayName);
+                    subCategoriesDiv.appendChild(subCategoryDiv);
+                });
+                
+                mainCategoryDiv.appendChild(mainTitle);
+                mainCategoryDiv.appendChild(subCategoriesDiv);
+                categoriesContainer.appendChild(mainCategoryDiv);
+            });
+        }
+
+        function createGameButton() {
+            // 버튼이 이미 있으면 중복 생성 방지
+            if (document.getElementById('gameButton')) return;
+
+            // 버튼 생성
+            const gameButton = document.createElement('button');
+            gameButton.id = 'gameButton';
+            gameButton.textContent = '게임 시작';
+            gameButton.style.position = 'fixed';
+            gameButton.style.top = '20px';
+            gameButton.style.right = '20px';
+            gameButton.style.padding = '10px 20px';
+            gameButton.style.backgroundColor = '#007bff';
+            gameButton.style.color = '#fff';
+            gameButton.style.border = 'none';
+            gameButton.style.borderRadius = '4px';
+            gameButton.style.cursor = 'pointer';
+            gameButton.style.zIndex = '1000';
+
+            // 버튼 클릭 시 game.html 새 창 열기
+            gameButton.onclick = () => {
+                window.open('game.html', '_blank');
+            };
+
+            // 버튼을 body에 추가
+            document.body.appendChild(gameButton);
+        }
+
+        // 기존 selectCategory 함수 수정
+        function selectCategory(mainCategory, subCategory) {
+            document.querySelectorAll('.sub-category').forEach(el => {
+                el.classList.remove('active');
+            });
+            event.target.closest('.sub-category').classList.add('active');
+
+            const fullCategory = `${mainCategories[mainCategory]}-${subCategory}`;
+            document.getElementById('selectedCategory').textContent = fullCategory;
+            displayPosts(mainCategories[mainCategory]);
+
+            document.getElementById('postDetail').style.display = 'none';
+            document.getElementById('postsContainer').style.display = 'grid';
+
+            // 하위 카테고리 선택 시 게임 버튼 생성
+            createGameButton();
+        }
+
+        // 게시글 표시
+        function displayPosts(category) {
+            const postsContainer = document.getElementById('postsContainer');
+            postsContainer.innerHTML = '';
+            
+            const filteredPosts = posts.filter(post => post.category === category);
+            
+            filteredPosts.forEach(post => {
+                const postElement = document.createElement('div');
+                postElement.className = 'post-card';
+                postElement.innerHTML = `
+                    <img src="${post.imageUrl}" alt="${post.title}" class="post-image">
+                    <div class="post-content">
+                        <h3 class="post-title">${post.title}</h3>
+                        <div class="likes">${post.likes}</div>
+                    </div>
+                `;
+                postElement.onclick = () => showPostDetail(post);
+                postsContainer.appendChild(postElement);
+            });
+        }
+
+        // 게시글 상세 보기
+        function showPostDetail(post) {
+            const postDetail = document.getElementById('postDetail');
+            const postsContainer = document.getElementById('postsContainer');
+            
+            postDetail.innerHTML = `
+                <button class="back-button" onclick="goBack()">목록으로 돌아가기</button>
+                <div class="post-detail-content">
+                    <img src="${post.imageUrl}" alt="${post.title}" class="post-detail-image">
+                    <h2>${post.title}</h2>
+                    <div class="likes">${post.likes}</div>
+                    <p>${post.content}</p>
+                    
+                    <div class="comments-section">
+                        <h3>댓글</h3>
+                        ${post.comments.map(comment => `
+                            <div class="comment">
+                                <strong>${comment.author}</strong>
+                                <p>${comment.text}</p>
+                                ${comment.replies.map(reply => `
+                                    <div class="reply">
+                                        <strong>${reply.author}</strong>
+                                        <p>${reply.text}</p>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+            
+            postsContainer.style.display = 'none';
+            postDetail.style.display = 'block';
+        }
+
+        // 목록으로 돌아가기
+        function goBack() {
+            document.getElementById('postDetail').style.display = 'none';
+            document.getElementById('postsContainer').style.display = 'grid';
+        }
+
+        // 초기화
+        window.onload = () => {
+            createCategories();
+        };
+    </script>
+</body>
+</html>

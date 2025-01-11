@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Traffic Simulation Game</title>
+    <style>
+        /* 기존 스타일은 유지 */
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f0f0f0;
+        }
+        #gameCanvas {
+            width: 1150px;
+            height: 600px;
+            background-color: #fff;
+            border: 1px solid #000;
+            position: relative;
+            cursor: crosshair;
+        }
+        #restrictedArea {
+            position: absolute;
+            left: 50px;
+            top: 50px;
+            width: 800px;
+            height: 470px;
+            background-color: rgba(200, 200, 200, 0.5);
+            border: 2px dashed #000;
+            overflow: hidden;
+        }
+        .grid-line {
+            position: absolute;
+            background-color: #ccc;
+        }
+        .square {
+            width: 10px;
+            height: 10px;
+            background-color: rgb(0, 255, 0);
+            position: absolute;
+            transform: translate(-50%, -50%);
+        }
+        #previewDot {
+            width: 13px;
+            height: 13px;
+            background-color: rgb(255, 0, 0);
+            position: absolute;
+            pointer-events: none;
+            visibility: hidden;
+            transform: translate(-50%, -50%);
+            z-index: 10;
+        }
+        .preview-circle {
+            position: absolute;
+            border-radius: 50%;
+            border: 2px solid rgba(255, 0, 0, 0.5);
+            pointer-events: none;
+            transform: translate(-50%, -50%);
+            visibility: hidden;
+            z-index: 9;
+        }
+        .circle {
+            position: absolute;
+            border-radius: 50%;
+            border: 2px solid rgba(255, 0, 0, 0.5);
+            pointer-events: none;
+            transform: translate(-50%, -50%);
+        }
+        .circle.radius-34 {
+            width: 68px;
+            height: 68px;
+        }
+        .circle.radius-59 {
+            width: 118px;
+            height: 118px;
+        }
+        .circle.radius-118 {
+            width: 236px;
+            height: 236px;
+        }
+        .button {
+            position: absolute;
+            top: 535px;
+            left: 350px;
+            width: 50px;
+            height: 50px;
+            background-color: #f0f0f0;
+            color: white;
+            border: 2px solid black;
+            cursor: pointer;
+            text-align: center;
+            line-height: 50px;
+            font-size: 10px;
+            border-radius: 5px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .button:active {
+            background-color: #d3d3d3;
+        }
+
+        .button img {
+            width: 24px;
+            height: 24px;
+        }
+
+        #installButton { left: 50px; }
+        #removeButton { left: 115px; }
+        #mapFileInput { display: none; }
+        #mapButton { left: 180px; }
+        
+        .map-cell {
+            position: absolute;
+            transition: background-color 0.3s;
+        }
+        .map-cell.dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            transform: translate(-4px, -4px);
+        }
+        .map-cell.pixel {
+            width: 2px;
+            height: 2px;
+        }
+        
+        #moneyBox {
+            position: absolute;
+            left: 900px;
+            top: 90px;
+            width: 170px;
+            height: 40px;
+            border: 2px solid #000;
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            padding: 0 15px;
+            font-size: 20px;
+            font-weight: bold;
+        }
+        .satisfaction-bar-container {
+            position: absolute;
+            left: 900px;
+            width: 200px;
+            height: 30px;
+            border: 2px solid #000;
+            background-color: #f0f0f0;
+            overflow: hidden;
+        }
+        
+        .satisfaction-bar-container:nth-child(1) { top: 310px; }
+        .satisfaction-bar-container:nth-child(2) { top: 350px; }
+        .satisfaction-bar-container:nth-child(3) { top: 390px; }
+        .satisfaction-bar-container:nth-child(4) { top: 430px; }
+        
+        .satisfaction-bar {
+            width: 0;
+            height: 100%;
+            transition: width 0.3s ease-in-out;
+        }
+        .satisfaction-bar-container:nth-child(1) .satisfaction-bar { background-color: rgba(0, 0, 255, 0.5); }
+        .satisfaction-bar-container:nth-child(2) .satisfaction-bar { background-color: rgba(255, 0, 0, 0.5); }
+        .satisfaction-bar-container:nth-child(3) .satisfaction-bar { background-color: rgba(0, 255, 0, 0.5); }
+        .satisfaction-bar-container:nth-child(4) .satisfaction-bar { background-color: rgba(128, 0, 128, 0.5); }
+
+        #timeDisplay {
+            position: absolute;
+            left: 900px;
+            top: 60px;
+            font-size: 20px;
+            font-weight: bold;
+        }
+        
+        #pauseButton {
+            position: absolute;
+            right: 50px;
+            bottom: 75px;
+            width: 200px;
+            height: 50px;
+            padding: 5px 15px;
+            font-size: 20px;
+            cursor: pointer;
+            background-color: white;
+            color: white;
+            border: 3px solid black;
+            border-radius: 5px;
+
+            /* 플렉스 박스 정렬 추가 */
+            display: flex;
+            align-items: center;   /* 수직 중앙 정렬 */
+            justify-content: center; /* 수평 중앙 정렬 */
+            gap: 10px;              /* 이미지와 텍스트 간격 */
+        }
+
+        #pauseButton img {
+            width: 40px;
+            height: 40px;
+        }
+        
+        #startButton {
+            position: absolute;
+            right: 50px;
+            bottom: 75px;
+            width: 200px;
+            height: 50px;
+            padding: 5px 15px;
+            font-size: 20px;
+            cursor: pointer;
+            background-color: black;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+        #dailyIncome {
+            position: absolute;
+            right: 57px;
+            top: 60px;
+            font-size: 20px;
+            font-weight: bold;
+            color: #4CAF50;
+        }
+    </style>
+</head>
+<body>
+    <!-- HTML 구조는 동일하게 유지 -->
+    <div id="gameCanvas">
+        <div id="title" style="position: absolute; left: 50px; top: 20px; font-size: 20px; font-weight: bold;">Ulsan Tram Route Design Simulation Game</div>
+        <div id="restrictedArea">
+            <div id="previewDot"></div>
+            <div id="removePreviewDot"></div>
+            <div id="previewCircle34" class="preview-circle"></div>
+            <div id="previewCircle59" class="preview-circle"></div>
+            <div id="previewCircle118" class="preview-circle"></div>
+        </div>
+        <div id="timeDisplay">0 Day</div>
+        <div id="dailyIncome">(+0)</div>
+        <button id="pauseButton">
+            <img src="images/pause.png" alt="Pause/Resume">
+        </button>
+        <button id="startButton">Start Game</button>
+        <div id="moneyBox">500</div>
+            <img src="images/money.png" alt="Map" style="width: 30px; height: 36px; position: absolute; left: 905px; top: 94px; z-index: 5;">
+        
+        <div id="satisfactionLabel" style="position: absolute; left: 980px; top: 265px;">
+            <img src="images/satisfaction.png" alt="Satisfaction" style="width: 40px; height: 40px;">
+        </div>
+        <div id="satisfactionBarWrapper">
+            <div class="satisfaction-bar-container">
+                <div class="satisfaction-bar" id="satisfactionBar1"></div>
+                <img src="images/commuting.png" alt="Map" style="width: 30px; height: 36px; position: absolute; left: 3px; top: 50%; transform: translateY(-50%); z-index: 5;">
+            </div>
+            <div class="satisfaction-bar-container">
+                <div class="satisfaction-bar" id="satisfactionBar2"></div>
+                <img src="images/transfer.png" alt="Map" style="width: 26px; height: 26px; position: absolute; left: 3px; top: 50%; transform: translateY(-50%); z-index: 5;">
+            </div>
+            <div class="satisfaction-bar-container">
+                <div class="satisfaction-bar" id="satisfactionBar3"></div>
+                <img src="images/movie.png" alt="Map" style="width: 26px; height: 26px; position: absolute; left: 3px; top: 50%; transform: translateY(-50%); z-index: 5;">
+            </div>
+            <div class="satisfaction-bar-container">
+                <div class="satisfaction-bar" id="satisfactionBar4"></div>
+                <img src="images/shopping.png" alt="Map" style="width: 26px; height: 26px; position: absolute; left: 3px; top: 50%; transform: translateY(-50%); z-index: 5;">
+            </div>
+        </div>
+        <button id="installButton" class="button">
+            <img src="images/tram.png" alt="Install" style="width: 30px; height: 30px;">
+        </button>
+        <button id="removeButton" class="button">
+            <img src="images/remove.png" alt="remove" style="width: 30px; height: 30px;">
+        </button>
+        <button id="mapButton" class="button">
+            <img src="images/map.png" alt="Map" style="width: 30px; height: 30px;">
+        </button>
+        <input type="file" id="mapFileInput" accept=".csv">
+    </div>
+
+    <script>
+        const restrictedArea = document.getElementById('restrictedArea');
+        const previewDot = document.getElementById('previewDot');
+        const removePreviewDot = document.getElementById('removePreviewDot');
+        const installButton = document.getElementById('installButton');
+        const removeButton = document.getElementById('removeButton');
+        const moneyBox = document.getElementById('moneyBox');
+        const mapButton = document.getElementById('mapButton');
+        const mapFileInput = document.getElementById('mapFileInput');
+
+        // const colors = ['red', 'orange', 'yellow', 'green', 'blue', 'pink'];
+        const colors = [[], [], [], [], [], []]
+
+        const GRID_SIZE = 5;
+        const DOT_SIZE = 5;
+        const PREVIEW_DOT_SIZE = 7;
+        
+        const timeDisplay = document.getElementById('timeDisplay');
+        const pauseButton = document.getElementById('pauseButton');
+        const pauseButtonImg = pauseButton.querySelector('img');
+        const startButton = document.getElementById('startButton');
+
+        const dailyIncome = document.getElementById('dailyIncome');
+        const DAILY_MONEY = 10;  // 일당 금액을 상수로 정의
+        
+        let days = 0;
+        let gameInterval;
+        let isGameRunning = false;
+        let isPaused = false;
+
+        let canPlaceDot = false;
+        let canRemoveDot = false;
+        let money = 500;
+        let mapData = [];
+        let satisfactionLevels = [30, 30, 30, 30];
+
+        // 프리뷰 원 요소들 가져오기
+        const previewCircle34 = document.getElementById('previewCircle34');
+        const previewCircle59 = document.getElementById('previewCircle59');
+        const previewCircle118 = document.getElementById('previewCircle118');
+
+        // 프리뷰 원 크기 설정
+        previewCircle34.style.width = '68px';
+        previewCircle34.style.height = '68px';
+        previewCircle59.style.width = '118px';
+        previewCircle59.style.height = '118px';
+        previewCircle118.style.width = '236px';
+        previewCircle118.style.height = '236px';
+
+        function startGame() {
+            if (!isGameRunning) {
+                isGameRunning = true;
+                pauseButton.style.display = 'flex';
+                startButton.style.display = 'none';
+                startTimer();
+            }
+        }
+
+        function togglePause() {
+            isPaused = !isPaused;
+            pauseButtonImg.src = isPaused ? 'images/resume.png' : 'images/pause.png';
+            pauseButtonImg.alt = isPaused ? 'Resume' : 'Pause';
+        }
+
+        function startTimer() {
+            gameInterval = setInterval(() => {
+                if (!isPaused) {
+                    days++;
+                    money += DAILY_MONEY;
+                    timeDisplay.textContent = `${days} Day`;
+                    moneyBox.textContent = money;
+                    dailyIncome.textContent = `(+${DAILY_MONEY})`;  // 일당 표시
+                }
+            }, 2000);
+        }
+
+        startButton.addEventListener('click', startGame);
+        pauseButton.addEventListener('click', togglePause);
+
+        function updateSatisfactionBars() {
+            satisfactionLevels.forEach((level, index) => {
+                const satisfactionBar = document.getElementById(`satisfactionBar${index+1}`);
+                if (satisfactionBar) {
+                    satisfactionBar.style.width = `${(level / 100) * 200}px`;
+                }
+            });
+        }
+
+        function findNearestIntersection(x, y) {
+            const centerX = Math.floor((x) / GRID_SIZE) * GRID_SIZE + 2.5;
+            const centerY = Math.floor((y) / GRID_SIZE) * GRID_SIZE + 2.5;
+            return { x: centerX - 2.5, y: centerY - 2.5 };
+        }
+
+        function findDotAtIntersection(x, y) {
+            const dots = Array.from(restrictedArea.getElementsByClassName('square'));
+            return dots.find(dot => {
+                const dotLeft = parseInt(dot.style.left);
+                const dotTop = parseInt(dot.style.top);
+                return dotLeft === x && dotTop === y;
+            });
+        }
+
+        function drawGrid() {
+            const areaWidth = restrictedArea.offsetWidth;
+            const areaHeight = restrictedArea.offsetHeight;
+
+            for (let x = 0; x <= areaWidth; x += GRID_SIZE) {
+                const verticalLine = document.createElement('div');
+                verticalLine.classList.add('grid-line');
+                verticalLine.style.width = '1px';
+                verticalLine.style.height = `${areaHeight}px`;
+                verticalLine.style.left = `${x - 0.5}px`;
+                verticalLine.style.top = '0';
+                restrictedArea.appendChild(verticalLine);
+            }
+
+            for (let y = 0; y <= areaHeight; y += GRID_SIZE) {
+                const horizontalLine = document.createElement('div');
+                horizontalLine.classList.add('grid-line');
+                horizontalLine.style.width = `${areaWidth}px`;
+                horizontalLine.style.height = '1px';
+                horizontalLine.style.left = '0';
+                horizontalLine.style.top = `${y - 0.5}px`;
+                restrictedArea.appendChild(horizontalLine);
+            }
+        }
+
+        function clearMap() {
+            const mapCells = document.querySelectorAll('.map-cell');
+            mapCells.forEach(cell => cell.remove());
+        }
+
+        function parseCSV(csvContent) {
+            const rows = csvContent.split('\n');
+            return rows.map(row => row.split(',').map(cell => parseInt(cell.trim(), 10) || 0));
+        }
+
+        function calculateDistance(x1, y1, x2, y2) {
+            return Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+        }
+
+        function getDistanceScore(distance) {
+            if (distance <= 34) return 3;
+            if (distance <= 59) return 2;
+            if (distance <= 118) return 1;
+            return 0;
+        }
+
+        function updateSatisfactionForNewDot(x, y) {
+            // 만족도 증가량을 저장할 배열 [통근, 환승, 여가, 쇼핑]
+            let satisfactionIncrease = [0, 0, 0, 0];
+            
+            const radii = [34, 59, 118];
+            const weight_satisfaction = 0.8;
+            radii.forEach(radius => {
+                const foundColors = findColorsInRadius(x, y, radius);
+                
+                foundColors.forEach(color => {
+                    const distanceScore = getDistanceScore(color.distance);
+                    
+                    switch(color.color) {
+                        case 'orange': // 환승
+                            satisfactionIncrease[1] += weight_satisfaction*distanceScore;
+                            break;
+                        case 'blue':
+                            satisfactionIncrease[0] += weight_satisfaction*distanceScore;
+                            break;
+                        case 'red':
+                            satisfactionIncrease[0] += weight_satisfaction*distanceScore;
+                            break;
+                        case 'green':
+                            satisfactionIncrease[2] += weight_satisfaction*distanceScore;
+                            break;
+                        case 'pink':
+                            satisfactionIncrease[3] += weight_satisfaction*distanceScore;
+                            break;
+                        case 'yellow':
+                            satisfactionIncrease[3] += weight_satisfaction*distanceScore;
+                            break;
+                    }
+                });
+            });
+            // 만족도 업데이트
+            for (let i = 0; i < 4; i++) {
+                satisfactionLevels[i] = Math.min(100, satisfactionLevels[i] + satisfactionIncrease[i]);
+            }
+            updateSatisfactionBars();
+        }
+
+
+        function drawMapFromCSV(csvContent) {
+            const rows = csvContent.split('\n');
+            rows.forEach((row, rowIndex) => {
+                const cells = row.split(',');
+                cells.forEach((cell, colIndex) => {
+                    const value = parseInt(cell.trim());
+                    if (value !== 0) {  // 0(흰색)이 아닌 경우에만 cell 생성
+                        const cellDiv = document.createElement('div');
+                        cellDiv.classList.add('map-cell');
+                        
+                        // 검은색(1)은 픽셀로, 나머지는 원형으로 표시
+                        if (value === 1) {
+                            cellDiv.classList.add('pixel');
+                        } else {
+                            cellDiv.classList.add('dot');
+                        }
+                        
+                        cellDiv.style.left = `${colIndex}px`;
+                        cellDiv.style.top = `${rowIndex}px`;
+                        
+                        // 색상 값에 따른 배경색 설정
+                        switch(value) {
+                            case 1: // 검은색
+                                cellDiv.style.backgroundColor = '#000000';
+                                break;
+                            case 2: // 빨강
+                                cellDiv.style.backgroundColor = '#FF0000';
+                                colors[0].push([colIndex, rowIndex]);
+                                break;
+                            case 3: // 주황
+                                cellDiv.style.backgroundColor = '#FFC000';
+                                colors[1].push([colIndex, rowIndex]);
+                                break;
+                            case 4: // 노랑
+                                cellDiv.style.backgroundColor = '#FFFF00';
+                                colors[2].push([colIndex, rowIndex]);
+                                break;
+                            case 5: // 초록
+                                cellDiv.style.backgroundColor = '#50B000';
+                                colors[3].push([colIndex, rowIndex]);
+                                break;
+                            case 6: // 파랑
+                                cellDiv.style.backgroundColor = '#0070C0';
+                                colors[4].push([colIndex, rowIndex]);
+                                break;
+                            case 7: // 분홍
+                                cellDiv.style.backgroundColor = '#CC66FF';
+                                colors[5].push([colIndex, rowIndex]);
+                                break;
+                        }
+                        
+                        restrictedArea.appendChild(cellDiv);
+                    }
+                });
+            });
+        }
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    const text = e.target.result;
+                    clearMap();
+                    mapData = parseCSV(text);
+                    drawMapFromCSV(text);
+                };
+                reader.readAsText(file);
+            }
+        }
+
+        function isValidInstall(x, y) {
+            const row = Math.floor(y);
+            const col = Math.floor(x);
+            return mapData[row] && mapData[row][col] !== 0;
+        }
+
+        function createCircle(x, y, radiusClass) {
+            const circle = document.createElement('div');
+            circle.classList.add('circle', radiusClass);
+            circle.style.left = `${x}px`;
+            circle.style.top = `${y}px`;
+            restrictedArea.appendChild(circle);
+            return circle;
+        }
+
+        function findColorsInRadius(x, y, radius) {
+            let foundColors = [];
+            
+            // 각 색상 배열에 대해 확인
+            colors.forEach((colorArray, index) => {
+                colorArray.forEach(([col, row]) => {
+                    const distance = calculateDistance(x, y, col, row);
+                    if (distance <= radius) {
+                        // 반경 내에 있는 색상과 좌표를 저장
+                        foundColors.push({
+                            color: getColorName(index),
+                            position: [col, row],
+                            distance: distance
+                        });
+                    }
+                });
+            });
+            
+            return foundColors;
+        }
+
+        // 색상의 이름을 반환하는 함수
+        function getColorName(index) {
+            const colorNames = ['red', 'orange', 'yellow', 'green', 'blue', 'pink'];
+            return colorNames[index] || 'unknown';
+        }
+
+        restrictedArea.addEventListener('mousemove', (event) => {
+            const rect = restrictedArea.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+
+            const intersection = findNearestIntersection(x, y);
+
+            if (intersection) {
+                if (canPlaceDot) {
+                    previewDot.style.left = `${intersection.x}px`;
+                    previewDot.style.top = `${intersection.y}px`;
+                    previewDot.style.visibility = 'visible';
+                    
+                    // 프리뷰 원들도 함께 표시
+                    previewCircle34.style.left = `${intersection.x}px`;
+                    previewCircle34.style.top = `${intersection.y}px`;
+                    previewCircle34.style.visibility = 'visible';
+                    
+                    previewCircle59.style.left = `${intersection.x}px`;
+                    previewCircle59.style.top = `${intersection.y}px`;
+                    previewCircle59.style.visibility = 'visible';
+                    
+                    previewCircle118.style.left = `${intersection.x}px`;
+                    previewCircle118.style.top = `${intersection.y}px`;
+                    previewCircle118.style.visibility = 'visible';
+                } else {
+                    previewDot.style.visibility = 'hidden';
+                    previewCircle34.style.visibility = 'hidden';
+                    previewCircle59.style.visibility = 'hidden';
+                    previewCircle118.style.visibility = 'hidden';
+                }
+            }
+        });
+
+        restrictedArea.addEventListener('mouseleave', () => {
+            previewDot.style.visibility = 'hidden';
+            removePreviewDot.style.visibility = 'hidden';
+            previewCircle34.style.visibility = 'hidden';
+            previewCircle59.style.visibility = 'hidden';
+            previewCircle118.style.visibility = 'hidden';
+        });
+
+        installButton.addEventListener('click', () => {
+            canPlaceDot = true;
+            canRemoveDot = false;
+        });
+
+        removeButton.addEventListener('click', () => {
+            canRemoveDot = true;
+            canPlaceDot = false;
+        });
+
+        restrictedArea.addEventListener('click', (event) => {
+            const rect = restrictedArea.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+
+            const intersection = findNearestIntersection(x, y);
+
+            if (intersection) {
+                if (canPlaceDot) {
+                    if (
+                        money - 50 >= 0 &&
+                        !findDotAtIntersection(intersection.x, intersection.y) &&
+                        isValidInstall(intersection.x, intersection.y)
+                    ) {
+                        const square = document.createElement('div');
+                        square.classList.add('square');
+                        square.style.left = `${intersection.x}px`;
+                        square.style.top = `${intersection.y}px`;
+                        
+                        restrictedArea.appendChild(square);
+                        updateSatisfactionForNewDot(intersection.x, intersection.y);
+                        
+                        money -= 50;
+                        moneyBox.textContent = money;
+                        canPlaceDot = false;
+                        previewDot.style.visibility = 'hidden';
+                    }
+                } else if (canRemoveDot) {
+                    const dotAtIntersection = findDotAtIntersection(intersection.x, intersection.y);
+                    if (dotAtIntersection) {
+                        dotAtIntersection.remove();
+                        canRemoveDot = false;
+                        removePreviewDot.style.visibility = 'hidden';
+                    }
+                }
+            }
+        });
+
+        mapButton.addEventListener('click', () => {
+            mapFileInput.click();
+        });
+
+        mapFileInput.addEventListener('change', handleFileSelect);
+        updateSatisfactionBars();
+        drawGrid();
+    </script>
+    
+</body>
+</html>
